@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Przeliczenie gotówki</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f5f7;
+      color: #111;
+    }
+    header {
+      padding: 12px 16px;
+      background: #111827;
+      color: white;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 18px;
+    }
+    main {
+      padding: 12px 16px 40px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .card h2 {
+      margin: 0 0 8px 0;
+      font-size: 16px;
+    }
+    .row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
+    .row label {
+      flex: 1 0 140px;
+      font-size: 14px;
+    }
+    input[type="text"], input[type="number"], textarea {
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      font-size: 14px;
+      flex: 1;
+      min-width: 0;
+    }
+    input[disabled] {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+    .btn {
+      border-radius: 999px;
+      padding: 6px 12px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary {
+      background: #2563eb;
+      color: white;
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+    }
+    .badge-ok {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    .badge-warn {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 6px;
+    }
+    th, td {
+      border-bottom: 1px solid #e5e7eb;
+      padding: 4px;
+      text-align: right;
+    }
+    th:first-child, td:first-child {
+      text-align: left;
+    }
+    .bundle-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 6px;
+      margin-bottom: 4px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .small {
+      font-size: 12px;
+      color: #6b7280;
+    }
+    textarea {
+      width: 100%;
+      min-height: 60px;
+      resize: vertical;
+    }
+    .summary-line {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+    .summary-line strong {
+      font-weight: 600;
+    }
+    .text-red {
+      color: #b91c1c;
+    }
+    .text-green {
+      color: #15803d;
+    }
+    .text-muted {
+      color: #6b7280;
+    }
+    .flex-between {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .mt-8 { margin-top: 8px; }
+    .mt-4 { margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Przeliczenie gotówki</h1>
+  </header>
+  <main>
+    <!-- Czas -->
+    <div class="card">
+      <h2>Czas przeliczenia</h2>
+      <div class="row">
+        <label>Data</label>
+        <div id="dateField"></div>
+      </div>
+      <div class="row">
+        <label>Godzina</label>
+        <div id="timeField"></div>
+      </div>
+    </div>
+
+    <!-- POS + sejf -->
+    <div class="card">
+      <h2>Deklaracje systemowe</h2>
+      <div class="row">
+        <label>Stan gotówki wg POS</label>
+        <input id="posInput" type="text" placeholder="np. 10000,00" />
+      </div>
+      <div class="row">
+        <label>Stan sejfu (domyślny)</label>
+        <input id="safeInput" type="text" disabled />
+        <button id="toggleSafeEdit" class="btn btn-secondary">Edytuj</button>
+      </div>
+      <div class="small">
+        Domyślny stan sejfu jest zapisywany w przeglądarce (localStorage).
+      </div>
+    </div>
+
+    <!-- Pakiety -->
+    <div class="card" id="bundlesCard">
+      <div class="flex-between">
+        <h2>Pakiety gotówki (banknoty)</h2>
+        <button id="addBundleBtn" class="btn btn-primary">+ Dodaj pakiet</button>
+      </div>
+      <div id="bundlesContainer" class="small">
+        Brak dodanych pakietów.
+      </div>
+      <div class="summary-line mt-8">
+        <span>Suma pakietów</span>
+        <strong id="bundlesTotal">0,00 zł</strong>
+      </div>
+    </div>
+
+    <!-- Kasetka -->
+    <div class="card">
+      <div class="flex-between">
+        <h2>Stan kasetki (monety + banknoty)</h2>
+        <div>
+          <button id="editCassetteBtn" class="btn btn-primary">Ustaw / Edytuj</button>
+          <button id="clearCassetteBtn" class="btn btn-danger" style="display:none;">Usuń</button>
+        </div>
+      </div>
+      <div id="cassetteContainer" class="small">
+        Kasetka nie jest jeszcze zdefiniowana.
+      </div>
+      <div class="summary-line mt-8">
+        <span>Stan kasetki</span>
+        <strong id="cassetteTotal">0,00 zł</strong>
+      </div>
+    </div>
+
+    <!-- Podsumowanie -->
+    <div class="card">
+      <h2>Podsumowanie</h2>
+      <div class="summary-line">
+        <span>Gotówka wg POS</span>
+        <strong id="summaryPos">0,00 zł</strong>
+      </div>
+      <div class="summary-line">
+        <span>Gotówka fizyczna</span>
+        <strong id="summaryPhysical">0,00 zł</strong>
+      </div>
+      <div class="summary-line">
+        <span>Różnica</span>
+        <strong id="summaryDiff">0,00 zł</strong>
+      </div>
+      <div id="summaryStatus" class="small text-muted mt-4">Brak danych.</div>
+      <button id="sendReportBtn" class="btn btn-primary mt-8" disabled>Wyślij raport mailem</button>
+      <div class="small mt-4">
+        Raport otworzy się w kliencie e-mail (Mail na iPhonie / macOS) z wypełnionym tematem i treścią.
+      </div>
+    </div>
+
+    <!-- Ustawienia maili -->
+    <div class="card">
+      <h2>Ustawienia raportu</h2>
+      <div class="row">
+        <label>Adresy e-mail (po jednym w linii)</label>
+      </div>
+      <textarea id="emailsTextarea" placeholder="np. kierownik@sklep.pl&#10;regionalny@firma.pl"></textarea>
+      <div class="small mt-4">
+        Adresy są zapisywane lokalnie w przeglądarce (localStorage).
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL PAKIET / KASETKA -->
+  <div id="modalOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4);">
+    <div style="background:white; border-radius:10px; max-width:480px; margin:40px auto; padding:12px 14px; box-shadow:0 2px 10px rgba(0,0,0,0.3);">
+      <div class="flex-between">
+        <h2 id="modalTitle" style="font-size:16px; margin:0 0 4px 0;">Edytuj</h2>
+        <button id="modalCloseBtn" class="btn btn-secondary">Zamknij</button>
+      </div>
+      <div id="modalContent" style="max-height:60vh; overflow:auto; margin-top:8px;"></div>
+      <div class="summary-line mt-8">
+        <span>Suma</span>
+        <strong id="modalSum">0,00 zł</strong>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---------- MODEL NOMINAŁÓW ----------
+    const banknoteDenomsTemplate = [
+      { label: "500 zł", value: 50000 },
+      { label: "200 zł", value: 20000 },
+      { label: "100 zł", value: 10000 },
+      { label: "50 zł",  value:  5000 },
+      { label: "20 zł",  value:  2000 },
+      { label: "10 zł",  value:  1000 }
+    ];
+
+    const cassetteDenomsTemplate = [
+      { label: "5 zł",   value:  500 },
+      { label: "2 zł",   value:  200 },
+      { label: "1 zł",   value:  100 },
+      { label: "50 gr",  value:   50 },
+      { label: "20 gr",  value:   20 },
+      { label: "10 gr",  value:   10 },
+      { label: "5 gr",   value:    5 },
+      { label: "2 gr",   value:    2 },
+      { label: "1 gr",   value:    1 },
+      { label: "10 zł",  value: 1000 },
+      { label: "20 zł",  value: 2000 },
+      { label: "50 zł",  value: 5000 },
+      { label: "100 zł", value:10000 },
+      { label: "200 zł", value:20000 },
+      { label: "500 zł", value:50000 }
+    ];
+
+    // ---------- STAN APLIKACJI ----------
+    let bundles = []; // {id, name, denominations:[{label,value,count}]}
+    let cassette = null; // jak wyżej
+    let editingBundleId = null; // do modala
+    let editingCassette = false;
+
+    // ---------- ELEMENTY DOM ----------
+    const dateField = document.getElementById("dateField");
+    const timeField = document.getElementById("timeField");
+    const posInput = document.getElementById("posInput");
+    const safeInput = document.getElementById("safeInput");
+    const toggleSafeEditBtn = document.getElementById("toggleSafeEdit");
+    const addBundleBtn = document.getElementById("addBundleBtn");
+    const bundlesContainer = document.getElementById("bundlesContainer");
+    const bundlesTotalEl = document.getElementById("bundlesTotal");
+    const cassetteContainer = document.getElementById("cassetteContainer");
+    const cassetteTotalEl = document.getElementById("cassetteTotal");
+    const editCassetteBtn = document.getElementById("editCassetteBtn");
+    const clearCassetteBtn = document.getElementById("clearCassetteBtn");
+    const summaryPos = document.getElementById("summaryPos");
+    const summaryPhysical = document.getElementById("summaryPhysical");
+    const summaryDiff = document.getElementById("summaryDiff");
+    const summaryStatus = document.getElementById("summaryStatus");
+    const sendReportBtn = document.getElementById("sendReportBtn");
+    const emailsTextarea = document.getElementById("emailsTextarea");
+
+    const modalOverlay = document.getElementById("modalOverlay");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalContent = document.getElementById("modalContent");
+    const modalCloseBtn = document.getElementById("modalCloseBtn");
+    const modalSum = document.getElementById("modalSum");
+
+    // ---------- POMOCNICZE ----------
+    function formatCurrency(grosze) {
+      const value = (grosze || 0) / 100;
+      return value.toFixed(2).replace(".", ",") + " zł";
+    }
+
+    function parseCurrencyToGrosze(text) {
+      if (!text) return 0;
+      let cleaned = text.replace("zł", "").replace(/\s/g, "").replace(",", ".");
+      const val = parseFloat(cleaned);
+      if (isNaN(val)) return 0;
+      return Math.round(val * 100);
+    }
+
+    function nowDateTime() {
+      const d = new Date();
+      const date = d.toLocaleDateString("pl-PL");
+      const time = d.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+      return { date, time, raw: d };
+    }
+
+    function loadLocalSettings() {
+      const safe = localStorage.getItem("safeAmountText");
+      if (safe) safeInput.value = safe;
+      else safeInput.value = "5000,00";
+
+      const emails = localStorage.getItem("reportEmails");
+      if (emails) emailsTextarea.value = emails;
+    }
+
+    function saveLocalSettings() {
+      localStorage.setItem("safeAmountText", safeInput.value || "");
+      localStorage.setItem("reportEmails", emailsTextarea.value || "");
+    }
+
+    // ---------- RENDER ----------
+    function renderDateTime() {
+      const { date, time } = nowDateTime();
+      dateField.textContent = date;
+      timeField.textContent = time;
+    }
+
+    function renderBundles() {
+      if (bundles.length === 0) {
+        bundlesContainer.textContent = "Brak dodanych pakietów.";
+        bundlesTotalEl.textContent = "0,00 zł";
+        return;
+      }
+
+      bundlesContainer.innerHTML = "";
+      let total = 0;
+
+      bundles.forEach(bundle => {
+        let bundleSum = bundle.denominations.reduce((acc, d) => acc + d.value * d.count, 0);
+        total += bundleSum;
+
+        const div = document.createElement("div");
+        div.className = "bundle";
+        div.innerHTML = `
+          <div class="bundle-header">
+            <span>${bundle.name}</span>
+            <span>${formatCurrency(bundleSum)}</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" data-bundle-id="${bundle.id}">Edytuj pakiet</button>
+        `;
+        bundlesContainer.appendChild(div);
+      });
+
+      bundlesTotalEl.textContent = formatCurrency(total);
+      // podpięcie przycisków Edytuj
+      bundlesContainer.querySelectorAll("button[data-bundle-id]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = btn.getAttribute("data-bundle-id");
+          openBundleModal(id);
+        });
+      });
+    }
+
+    function renderCassette() {
+      if (!cassette) {
+        cassetteContainer.textContent = "Kasetka nie jest jeszcze zdefiniowana.";
+        cassetteTotalEl.textContent = "0,00 zł";
+        clearCassetteBtn.style.display = "none";
+        return;
+      }
+      const sum = cassette.denominations.reduce((acc, d) => acc + d.value * d.count, 0);
+      cassetteContainer.textContent = `Kasetka: ${formatCurrency(sum)} (kliknij „Ustaw / Edytuj” aby zmienić nominały)`;
+      cassetteTotalEl.textContent = formatCurrency(sum);
+      clearCassetteBtn.style.display = "inline-flex";
+    }
+
+    function renderSummary() {
+      const pos = parseCurrencyToGrosze(posInput.value);
+      const safe = parseCurrencyToGrosze(safeInput.value);
+      const bundlesTotal = bundles.reduce((sum, b) => sum + b.denominations.reduce((acc, d) => acc + d.value * d.count, 0), 0);
+      const cassetteTotal = cassette ? cassette.denominations.reduce((acc, d) => acc + d.value * d.count, 0) : 0;
+      const physical = safe + bundlesTotal + cassetteTotal;
+      const diff = physical - pos;
+
+      summaryPos.textContent = formatCurrency(pos);
+      summaryPhysical.textContent = formatCurrency(physical);
+      summaryDiff.textContent = formatCurrency(diff);
+
+      if (pos === 0 && physical === 0) {
+        summaryStatus.textContent = "Brak danych.";
+        summaryStatus.className = "small text-muted";
+      } else if (diff === 0) {
+        summaryStatus.textContent = "Kwota się zgadza.";
+        summaryStatus.className = "small badge badge-ok";
+      } else if (diff > 0) {
+        summaryStatus.textContent = "Nadwyżka gotówki: " + formatCurrency(diff);
+        summaryStatus.className = "small text-green";
+      } else {
+        summaryStatus.textContent = "Niedobór gotówki: " + formatCurrency(diff);
+        summaryStatus.className = "small text-red";
+      }
+
+      sendReportBtn.disabled = pos <= 0;
+    }
+
+    function updateAll() {
+      renderBundles();
+      renderCassette();
+      renderSummary();
+      saveLocalSettings();
+    }
+
+    // ---------- MODAL PAKIET / KASETKA ----------
+    function openBundleModal(bundleId) {
+      editingCassette = false;
+      editingBundleId = bundleId;
+      const bundle = bundles.find(b => b.id === bundleId);
+      if (!bundle) return;
+      modalTitle.textContent = bundle.name;
+      renderModalDenoms(bundle.denominations);
+      modalOverlay.style.display = "block";
+      updateModalSum();
+    }
+
+    function openCassetteModal() {
+      editingCassette = true;
+      if (!cassette) {
+        cassette = {
+          id: "cassette",
+          name: "Kasetka",
+          denominations: cassetteDenomsTemplate.map(d => ({ ...d, count: 0 }))
+        };
+      }
+      modalTitle.textContent = "Stan kasetki";
+      renderModalDenoms(cassette.denominations);
+      modalOverlay.style.display = "block";
+      updateModalSum();
+    }
+
+    function renderModalDenoms(denoms) {
+      modalContent.innerHTML = "";
+      const table = document.createElement("table");
+      const thead = document.createElement("thead");
+      thead.innerHTML = "<tr><th>Nominał</th><th>Ilość</th><th>Wartość</th></tr>";
+      table.appendChild(thead);
+
+      const tbody = document.createElement("tbody");
+      denoms.forEach((d, index) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${d.label}</td>
+          <td><input type="number" min="0" value="${d.count}" data-index="${index}" style="width:60px; text-align:right;"></td>
+          <td>${formatCurrency(d.value * d.count)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      modalContent.appendChild(table);
+
+      // podpięcie inputów
+      tbody.querySelectorAll("input[type='number']").forEach(input => {
+        input.addEventListener("input", () => {
+          const idx = parseInt(input.getAttribute("data-index"), 10);
+          const val = parseInt(input.value || "0", 10);
+          if (editingCassette) {
+            cassette.denominations[idx].count = val;
+          } else {
+            const bundle = bundles.find(b => b.id === editingBundleId);
+            if (!bundle) return;
+            bundle.denominations[idx].count = val;
+          }
+          // zaktualizuj wartość w wierszu
+          const row = input.closest("tr");
+          const d = editingCassette ? cassette.denominations[idx] : bundles.find(b => b.id === editingBundleId).denominations[idx];
+          row.children[2].textContent = formatCurrency(d.value * d.count);
+          updateModalSum();
+          updateAll();
+        });
+      });
+    }
+
+    function updateModalSum() {
+      let sum = 0;
+      if (editingCassette && cassette) {
+        sum = cassette.denominations.reduce((acc, d) => acc + d.value * d.count, 0);
+      } else if (!editingCassette) {
+        const bundle = bundles.find(b => b.id === editingBundleId);
+        if (bundle) {
+          sum = bundle.denominations.reduce((acc, d) => acc + d.value * d.count, 0);
+        }
+      }
+      modalSum.textContent = formatCurrency(sum);
+    }
+
+    function closeModal() {
+      modalOverlay.style.display = "none";
+      editingBundleId = null;
+      editingCassette = false;
+    }
+
+    // ---------- RAPORT / MAIL ----------
+    function generateReportText() {
+      const { date, time } = nowDateTime();
+      const pos = parseCurrencyToGrosze(posInput.value);
+      const safe = parseCurrencyToGrosze(safeInput.value);
+      const bundlesTotal = bundles.reduce((sum, b) => sum + b.denominations.reduce((acc, d) => acc + d.value * d.count, 0), 0);
+      const cassetteTotal = cassette ? cassette.denominations.reduce((acc, d) => acc + d.value * d.count, 0) : 0;
+      const physical = safe + bundlesTotal + cassetteTotal;
+      const diff = physical - pos;
+
+      let body = "";
+      body += "Raport przeliczenia gotówki\n";
+      body += "Data przeliczenia: " + date + "\n";
+      body += "Godzina przeliczenia: " + time + "\n\n";
+
+      body += "Stan wg POS:          " + formatCurrency(pos) + "\n";
+      body += "Stan sejfu:           " + formatCurrency(safe) + "\n";
+      body += "Suma pakietów:        " + formatCurrency(bundlesTotal) + "\n";
+      body += "Stan kasetki:         " + formatCurrency(cassetteTotal) + "\n\n";
+
+      body += "Gotówka fizyczna:     " + formatCurrency(physical) + "\n";
+      body += "Różnica:              " + formatCurrency(diff) + "\n";
+
+      if (diff < 0) {
+        body += "Status: NIEDOBÓR GOTÓWKI\n\n";
+      } else if (diff > 0) {
+        body += "Status: NADWYŻKA GOTÓWKI\n\n";
+      } else {
+        body += "Status: KWOTA SIĘ ZGADZA\n\n";
+      }
+
+      if (bundles.length > 0) {
+        body += "Szczegóły pakietów:\n";
+        bundles.forEach(b => {
+          const sum = b.denominations.reduce((acc, d) => acc + d.value * d.count, 0);
+          body += "- " + b.name + ": " + formatCurrency(sum) + "\n";
+        });
+        body += "\n";
+      }
+
+      bundles.forEach(b => {
+        body += "Nominały – " + b.name + ":\n";
+        b.denominations.forEach(d => {
+          if (d.count > 0) {
+            body += "  " + d.label + ": " + d.count + " szt. = " + formatCurrency(d.value * d.count) + "\n";
+          }
+        });
+        body += "\n";
+      });
+
+      if (cassette) {
+        body += "Nominały – Kasetka:\n";
+        cassette.denominations.forEach(d => {
+          if (d.count > 0) {
+            body += "  " + d.label + ": " + d.count + " szt. = " + formatCurrency(d.value * d.count) + "\n";
+          }
+        });
+        body += "\n";
+      }
+
+      return body;
+    }
+
+    function sendReport() {
+      const { date, time } = nowDateTime();
+      const subject = `Raport przeliczenia gotówki – ${date} ${time}`;
+      const body = generateReportText();
+      const emails = emailsTextarea.value
+        .split(/\r?\n/)
+        .map(e => e.trim())
+        .filter(e => e.length > 0)
+        .join(",");
+
+      const mailto = "mailto:" + encodeURIComponent(emails) +
+        "?subject=" + encodeURIComponent(subject) +
+        "&body=" + encodeURIComponent(body);
+
+      window.location.href = mailto;
+    }
+
+    // ---------- ZDARZENIA ----------
+    posInput.addEventListener("input", () => {
+      updateAll();
+    });
+
+    toggleSafeEditBtn.addEventListener("click", () => {
+      if (safeInput.disabled) {
+        safeInput.disabled = false;
+        toggleSafeEditBtn.textContent = "Zapisz";
+        safeInput.focus();
+      } else {
+        safeInput.disabled = true;
+        toggleSafeEditBtn.textContent = "Edytuj";
+        saveLocalSettings();
+        updateAll();
+      }
+    });
+
+    emailsTextarea.addEventListener("input", () => {
+      saveLocalSettings();
+    });
+
+    addBundleBtn.addEventListener("click", () => {
+      const id = "b_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+      const bundle = {
+        id,
+        name: "Pakiet #" + (bundles.length + 1),
+        denominations: banknoteDenomsTemplate.map(d => ({ ...d, count: 0 }))
+      };
+      bundles.push(bundle);
+      updateAll();
+      openBundleModal(id);
+    });
+
+    editCassetteBtn.addEventListener("click", () => {
+      openCassetteModal();
+    });
+
+    clearCassetteBtn.addEventListener("click", () => {
+      cassette = null;
+      updateAll();
+    });
+
+    modalCloseBtn.addEventListener("click", closeModal);
+    modalOverlay.addEventListener("click", (e) => {
+      if (e.target === modalOverlay) closeModal();
+    });
+
+    sendReportBtn.addEventListener("click", sendReport);
+
+    // ---------- START ----------
+    renderDateTime();
+    loadLocalSettings();
+    updateAll();
+    // odśwież godzinę co minutę
+    setInterval(renderDateTime, 30000);
+  </script>
+</body>
+</html>
