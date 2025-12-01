@@ -100,10 +100,6 @@
       background: #d1fae5;
       color: #065f46;
     }
-    .badge-warn {
-      background: #fee2e2;
-      color: #b91c1c;
-    }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -145,6 +141,20 @@
     .summary-line strong {
       font-weight: 600;
     }
+
+    /* –– WYRAŹNIEJSZA LINIA RÓŻNICY –– */
+    .summary-line.diff {
+      margin-top: 6px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: #111827;
+      color: #f9fafb;
+    }
+    .summary-line.diff strong {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
     .text-red {
       color: #b91c1c;
     }
@@ -161,6 +171,27 @@
     }
     .mt-8 { margin-top: 8px; }
     .mt-4 { margin-top: 4px; }
+
+    /* –– KOLOROWY PASEK STATUSU –– */
+    .status-banner {
+      margin-top: 8px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .status-neutral {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    .status-over {       /* nadwyżka */
+      background: #dcfce7;
+      color: #166534;
+    }
+    .status-under {     /* niedobór */
+      background: #fee2e2;
+      color: #b91c1c;
+    }
   </style>
 </head>
 <body>
@@ -184,24 +215,32 @@
     <!-- POS + sejf -->
     <div class="card">
       <h2>Deklaracje systemowe</h2>
+
       <div class="row">
         <label>Stan gotówki wg POS</label>
         <input id="posInput" type="text" placeholder="np. 10000,00" />
       </div>
-      <div class="row">
-        <label>Stan sejfu (domyślny)</label>
-        <input id="safeInput" type="text" disabled />
+
+      <div class="row" style="align-items: center;">
+        <label style="flex: 1 0 200px;">
+          Stan sejfu (zaplecze)
+        </label>
         <button id="toggleSafeEdit" class="btn btn-secondary">Edytuj</button>
       </div>
+
+      <div class="row" style="margin-top: -4px;">
+        <input id="safeInput" type="text" disabled />
+      </div>
+
       <div class="small">
-        Domyślny stan sejfu jest zapisywany w przeglądarce (localStorage).
+        Domyślny stan sejfu (zaplecze) jest zapisywany w przeglądarce (localStorage).
       </div>
     </div>
 
     <!-- Pakiety -->
     <div class="card" id="bundlesCard">
       <div class="flex-between">
-        <h2>Pakiety gotówki (banknoty)</h2>
+        <h2>Pakiety gotówki (mBank)</h2>
         <button id="addBundleBtn" class="btn btn-primary">+ Dodaj pakiet</button>
       </div>
       <div id="bundlesContainer" class="small">
@@ -216,7 +255,7 @@
     <!-- Kasetka -->
     <div class="card">
       <div class="flex-between">
-        <h2>Stan kasetki (monety + banknoty)</h2>
+        <h2>Stan kasetki (salon)</h2>
         <div>
           <button id="editCassetteBtn" class="btn btn-primary">Ustaw / Edytuj</button>
           <button id="clearCassetteBtn" class="btn btn-danger" style="display:none;">Usuń</button>
@@ -242,11 +281,15 @@
         <span>Gotówka fizyczna</span>
         <strong id="summaryPhysical">0,00 zł</strong>
       </div>
-      <div class="summary-line">
+      <div class="summary-line diff">
         <span>Różnica</span>
         <strong id="summaryDiff">0,00 zł</strong>
       </div>
-      <div id="summaryStatus" class="small text-muted mt-4">Brak danych.</div>
+
+      <div id="summaryStatus" class="status-banner status-neutral">
+        Brak danych.
+      </div>
+
       <button id="sendReportBtn" class="btn btn-primary mt-8" disabled>Wyślij raport mailem</button>
       <div class="small mt-4">
         Raport otworzy się w kliencie e-mail (Mail na iPhonie / macOS) z wypełnionym tematem i treścią.
@@ -297,7 +340,7 @@
       { label: "500 zł", value: 50000 },
       { label: "200 zł", value: 20000 },
       { label: "100 zł", value: 10000 },
-      { label: "50   zł", value:  5000 },
+      { label: "50 zł",  value:  5000 },
       { label: "20 zł",  value:  2000 },
       { label: "10 zł",  value:  1000 },
       { label: "5 zł",   value:   500 },
@@ -416,7 +459,7 @@
 
       bundlesTotalEl.textContent = formatCurrency(total);
 
-      // podpięcie przycisków Edytuj
+      // Edycja
       bundlesContainer.querySelectorAll("[data-bundle-edit]").forEach(btn => {
         btn.addEventListener("click", () => {
           const id = btn.getAttribute("data-bundle-edit");
@@ -424,7 +467,7 @@
         });
       });
 
-      // podpięcie przycisków Usuń
+      // Usuwanie
       bundlesContainer.querySelectorAll("[data-bundle-delete]").forEach(btn => {
         btn.addEventListener("click", () => {
           const id = btn.getAttribute("data-bundle-delete");
@@ -465,16 +508,16 @@
 
       if (pos === 0 && physical === 0) {
         summaryStatus.textContent = "Brak danych.";
-        summaryStatus.className = "small text-muted";
+        summaryStatus.className = "status-banner status-neutral";
       } else if (diff === 0) {
-        summaryStatus.textContent = "Kwota się zgadza.";
-        summaryStatus.className = "small badge badge-ok";
+        summaryStatus.textContent = "KWOTA SIĘ ZGADZA";
+        summaryStatus.className = "status-banner status-neutral";
       } else if (diff > 0) {
-        summaryStatus.textContent = "Nadwyżka gotówki: " + formatCurrency(diff);
-        summaryStatus.className = "small text-green";
+        summaryStatus.textContent = "NADWYŻKA GOTÓWKI: " + formatCurrency(diff);
+        summaryStatus.className = "status-banner status-over";
       } else {
-        summaryStatus.textContent = "Niedobór gotówki: " + formatCurrency(diff);
-        summaryStatus.className = "small text-red";
+        summaryStatus.textContent = "NIEDOBÓR GOTÓWKI: " + formatCurrency(diff);
+        summaryStatus.className = "status-banner status-under";
       }
 
       sendReportBtn.disabled = pos <= 0;
@@ -591,9 +634,9 @@
       body += "Godzina przeliczenia: " + time + "\n\n";
 
       body += "Stan wg POS:          " + formatCurrency(pos) + "\n";
-      body += "Stan sejfu:           " + formatCurrency(safe) + "\n";
-      body += "Suma pakietów:        " + formatCurrency(bundlesTotal) + "\n";
-      body += "Stan kasetki:         " + formatCurrency(cassetteTotal) + "\n\n";
+      body += "Stan sejfu (zaplecze): " + formatCurrency(safe) + "\n";
+      body += "Suma pakietów (mBank): " + formatCurrency(bundlesTotal) + "\n";
+      body += "Stan kasetki (salon):  " + formatCurrency(cassetteTotal) + "\n\n";
 
       body += "Gotówka fizyczna:     " + formatCurrency(physical) + "\n";
       body += "Różnica:              " + formatCurrency(diff) + "\n";
@@ -607,7 +650,7 @@
       }
 
       if (bundles.length > 0) {
-        body += "Szczegóły pakietów:\n";
+        body += "Szczegóły pakietów (mBank):\n";
         bundles.forEach(b => {
           const sum = b.denominations.reduce((acc, d) => acc + d.value * d.count, 0);
           body += "- " + b.name + ": " + formatCurrency(sum) + "\n";
@@ -626,7 +669,7 @@
       });
 
       if (cassette) {
-        body += "Nominały – Kasetka:\n";
+        body += "Nominały – Kasetka (salon):\n";
         cassette.denominations.forEach(d => {
           if (d.count > 0) {
             body += "  " + d.label + ": " + d.count + " szt. = " + formatCurrency(d.value * d.count) + "\n";
@@ -709,7 +752,6 @@
     renderDateTime();
     loadLocalSettings();
     updateAll();
-    // odśwież godzinę co chwilę (nie musi być superczęsto)
     setInterval(renderDateTime, 30000);
   </script>
 </body>
