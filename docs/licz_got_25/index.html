@@ -141,8 +141,7 @@
     .summary-line strong {
       font-weight: 600;
     }
-
-    /* –– WYRAŹNIEJSZA LINIA RÓŻNICY –– */
+    /* mocniejsza linia różnicy */
     .summary-line.diff {
       margin-top: 6px;
       padding: 6px 10px;
@@ -154,16 +153,9 @@
       font-size: 15px;
       font-weight: 700;
     }
-
-    .text-red {
-      color: #b91c1c;
-    }
-    .text-green {
-      color: #15803d;
-    }
-    .text-muted {
-      color: #6b7280;
-    }
+    .text-red { color: #b91c1c; }
+    .text-green { color: #15803d; }
+    .text-muted { color: #6b7280; }
     .flex-between {
       display: flex;
       justify-content: space-between;
@@ -171,8 +163,7 @@
     }
     .mt-8 { margin-top: 8px; }
     .mt-4 { margin-top: 4px; }
-
-    /* –– KOLOROWY PASEK STATUSU –– */
+    /* kolorowy pasek statusu */
     .status-banner {
       margin-top: 8px;
       padding: 8px 10px;
@@ -184,11 +175,11 @@
       background: #e5e7eb;
       color: #374151;
     }
-    .status-over {       /* nadwyżka */
+    .status-over {
       background: #dcfce7;
       color: #166534;
     }
-    .status-under {     /* niedobór */
+    .status-under {
       background: #fee2e2;
       color: #b91c1c;
     }
@@ -212,24 +203,25 @@
       </div>
     </div>
 
-    <!-- POS + sejf -->
+    <!-- Deklaracje systemowe -->
     <div class="card">
       <h2>Deklaracje systemowe</h2>
 
+      <!-- POS -->
       <div class="row">
         <label>Stan gotówki wg POS</label>
         <input id="posInput" type="text" placeholder="np. 10000,00" />
       </div>
 
-      <div class="row" style="align-items: center;">
-        <label style="flex: 1 0 200px;">
-          Stan sejfu (zaplecze)
-        </label>
+      <!-- Sejf: label + Edytuj -->
+      <div class="row" style="justify-content: space-between; align-items: center;">
+        <label style="flex: 1;">Stan sejfu (zaplecze)</label>
         <button id="toggleSafeEdit" class="btn btn-secondary">Edytuj</button>
       </div>
 
-      <div class="row" style="margin-top: -4px;">
-        <input id="safeInput" type="text" disabled />
+      <!-- Sejf: pole (taka sama szerokość jak POS) -->
+      <div class="row">
+        <input id="safeInput" type="text" style="width: 100%;" disabled />
       </div>
 
       <div class="small">
@@ -325,7 +317,7 @@
   </div>
 
   <script>
-    // ---------- MODEL NOMINAŁÓW ----------
+    // ---------- NOMINAŁY ----------
     const banknoteDenomsTemplate = [
       { label: "500 zł", value: 50000 },
       { label: "200 zł", value: 20000 },
@@ -335,7 +327,7 @@
       { label: "10 zł",  value:  1000 }
     ];
 
-    // KASETKA: od największego do najmniejszego (500 zł -> 1 gr)
+    // kasetka: 500 zł -> 1 gr
     const cassetteDenomsTemplate = [
       { label: "500 zł", value: 50000 },
       { label: "200 zł", value: 20000 },
@@ -354,13 +346,13 @@
       { label: "1 gr",   value:     1 }
     ];
 
-    // ---------- STAN APLIKACJI ----------
-    let bundles = []; // {id, name, denominations:[{label,value,count}]}
+    // ---------- STAN ----------
+    let bundles = [];    // {id, name, denominations:[{label,value,count}]}
     let cassette = null; // jak wyżej
-    let editingBundleId = null; // do modala
+    let editingBundleId = null;
     let editingCassette = false;
 
-    // ---------- ELEMENTY DOM ----------
+    // ---------- DOM ----------
     const dateField = document.getElementById("dateField");
     const timeField = document.getElementById("timeField");
     const posInput = document.getElementById("posInput");
@@ -472,7 +464,6 @@
         btn.addEventListener("click", () => {
           const id = btn.getAttribute("data-bundle-delete");
           bundles = bundles.filter(b => b.id !== id);
-          // ponumeruj pakiety od nowa
           bundles.forEach((b, idx) => {
             b.name = "Pakiet #" + (idx + 1);
           });
@@ -530,7 +521,7 @@
       saveLocalSettings();
     }
 
-    // ---------- MODAL PAKIET / KASETKA ----------
+    // ---------- MODAL ----------
     function openBundleModal(bundleId) {
       editingCassette = false;
       editingBundleId = bundleId;
@@ -577,7 +568,6 @@
       table.appendChild(tbody);
       modalContent.appendChild(table);
 
-      // podpięcie inputów
       tbody.querySelectorAll("input[type='number']").forEach(input => {
         input.addEventListener("input", () => {
           const idx = parseInt(input.getAttribute("data-index"), 10);
@@ -589,9 +579,10 @@
             if (!bundle) return;
             bundle.denominations[idx].count = val;
           }
-          // zaktualizuj wartość w wierszu
           const row = input.closest("tr");
-          const d = editingCassette ? cassette.denominations[idx] : bundles.find(b => b.id === editingBundleId).denominations[idx];
+          const d = editingCassette
+            ? cassette.denominations[idx]
+            : bundles.find(b => b.id === editingBundleId).denominations[idx];
           row.children[2].textContent = formatCurrency(d.value * d.count);
           updateModalSum();
           updateAll();
@@ -618,7 +609,7 @@
       editingCassette = false;
     }
 
-    // ---------- RAPORT / MAIL ----------
+    // ---------- RAPORT ----------
     function generateReportText() {
       const { date, time } = nowDateTime();
       const pos = parseCurrencyToGrosze(posInput.value);
@@ -633,13 +624,13 @@
       body += "Data przeliczenia: " + date + "\n";
       body += "Godzina przeliczenia: " + time + "\n\n";
 
-      body += "Stan wg POS:          " + formatCurrency(pos) + "\n";
-      body += "Stan sejfu (zaplecze): " + formatCurrency(safe) + "\n";
-      body += "Suma pakietów (mBank): " + formatCurrency(bundlesTotal) + "\n";
-      body += "Stan kasetki (salon):  " + formatCurrency(cassetteTotal) + "\n\n";
+      body += "Stan wg POS:             " + formatCurrency(pos) + "\n";
+      body += "Stan sejfu (zaplecze):   " + formatCurrency(safe) + "\n";
+      body += "Suma pakietów (mBank):   " + formatCurrency(bundlesTotal) + "\n";
+      body += "Stan kasetki (salon):    " + formatCurrency(cassetteTotal) + "\n\n";
 
-      body += "Gotówka fizyczna:     " + formatCurrency(physical) + "\n";
-      body += "Różnica:              " + formatCurrency(diff) + "\n";
+      body += "Gotówka fizyczna:        " + formatCurrency(physical) + "\n";
+      body += "Różnica:                 " + formatCurrency(diff) + "\n";
 
       if (diff < 0) {
         body += "Status: NIEDOBÓR GOTÓWKI\n\n";
@@ -699,9 +690,7 @@
     }
 
     // ---------- ZDARZENIA ----------
-    posInput.addEventListener("input", () => {
-      updateAll();
-    });
+    posInput.addEventListener("input", updateAll);
 
     toggleSafeEditBtn.addEventListener("click", () => {
       if (safeInput.disabled) {
@@ -716,9 +705,7 @@
       }
     });
 
-    emailsTextarea.addEventListener("input", () => {
-      saveLocalSettings();
-    });
+    emailsTextarea.addEventListener("input", saveLocalSettings);
 
     addBundleBtn.addEventListener("click", () => {
       const id = "b_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
@@ -732,9 +719,7 @@
       openBundleModal(id);
     });
 
-    editCassetteBtn.addEventListener("click", () => {
-      openCassetteModal();
-    });
+    editCassetteBtn.addEventListener("click", openCassetteModal);
 
     clearCassetteBtn.addEventListener("click", () => {
       cassette = null;
